@@ -1,645 +1,755 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Volume2,
-  VolumeX,
-  Activity,
-  CheckCircle,
-  Music,
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, RotateCcw, SkipForward, Volume2, VolumeX, CheckCircle, Flame, Trophy, RefreshCw, Info, ChevronDown, ChevronUp, Music } from 'lucide-react';
 
-const EXERCISES = [
+// --- נתוני האימון (8 תחנות HIIRT בעברית) ---
+const WORKOUT_STATIONS = [
   {
-    name: 'סקוואט גובלט עם משקולת',
-    target: 'ארבע ראשי, עכוז ושרירי ליבה.',
-    cue: 'החזק משקולת אנכית כנגד החזה עם מרפקים צמודים מטה. רד לאחור ולמטה עד שהירכיים מקבילות לרצפה, ואז דחוף למעלה דרך מרכז כף הרגל.',
+    id: 1,
+    category: 'פלג גוף תחתון וליבה',
+    name: 'גובלט סקוואט עם משקולת',
+    target: 'ארבע ראשי, ישבן וליבה',
+    cue: 'החזק משקולת אחת אנכית צמוד לחזה עם מרפקים מכונסים. הורד את האגן לאחור ולמטה עד שהירכיים מקבילות לרצפה, ודחוף חזרה למעלה דרך מרכז כף הרגל.'
   },
   {
-    name: 'שכיבות סמיכה (או לחיצת חזה עם משקולות)',
-    target: 'חזה, כתף קדמית, ויד אחורית.',
-    cue: 'שמור על גוף ישר כסרגל וזווית מרפקים של כ-45 מעלות מהגוף בזמן שאתה מוריד את החזה לרצפה.',
+    id: 2,
+    category: 'פלג גוף תחתון וליבה',
+    name: 'שכיבות סמיכה (או לחיצת חזה בשכיבה)',
+    target: 'חזה, כתף קדמית ויד אחורית',
+    cue: 'שמור על גוף ישר כמקשה אחת ומרפקים בזווית של כ-45 מעלות מהגוף בזמן הורדת החזה לכיוון הרצפה.'
   },
   {
-    name: 'דדליפט רומני עם משקולות',
-    target: 'ירך אחורית, עכוז וגב תחתון.',
-    cue: 'שמור על כיפוף קל בברכיים ודחוף את האגן ישירות לאחור, שמור את המשקולות קרובות לשוקיים עד שתרגיש מתיחה עמוקה בירך האחורית.',
+    id: 3,
+    category: 'פלג גוף תחתון וליבה',
+    name: 'דדליפט רומני עם משקולות (RDLs)',
+    target: 'ירך אחורית, ישבן וגב תחתון',
+    cue: 'שמור על כיפוף קל בברכיים ודחוף את האגן ישר לאחור, כשהמשקולות צמודות לשוקיים, עד שתרגיש מתיחה עמוקה בירך האחורית.'
   },
   {
-    name: 'חתירה בהטיית גו עם משקולות',
-    target: 'גב עליון, רחב גבי ודו-ראשי.',
-    cue: 'הישען קדימה בזווית של 45 מעלות עם גב ישר. משוך משקולת אחת לכיוון המותן תוך כיווץ השכמה לאחור, הורד בשליטה והחלף צד.',
+    id: 4,
+    category: 'פלג גוף תחתון וליבה',
+    name: 'חתירה בהטיית גו לסירוגין',
+    target: 'גב עליון, רחב גבי ויד קדמית',
+    cue: 'הטה את הגו קדימה בזווית של 45 מעלות עם גב ישר. משוך משקולת אחת לכיוון המותן תוך כיווץ השכמה לאחור, הורד בשליטה והחלף צד.'
   },
   {
-    name: 'הרחקת כתפיים עם משקולות',
-    target: 'כתף אמצעית.',
-    cue: 'עמוד זקוף עם המשקולות בצידי הגוף וכיפוף קל במרפקים. הרם את הזרועות לצדדים עד לגובה הכתפיים, הובל עם המרפקים והימנע מהרמת הטרפזים.',
+    id: 5,
+    category: 'כתפיים, יד קדמית ואחורית',
+    name: 'הרחקת כתפיים לצדדים',
+    target: 'כתף אמצעית',
+    cue: 'עמוד זקוף עם משקולות בצדי הגוף וכיפוף קל במרפקים. הרם את הידיים לצדדים עד לגובה הכתפיים, הובל עם המרפקים והימנע מהרמת הטרפזים.'
   },
   {
-    name: 'כפיפת מרפקים פטישים',
-    target: 'דו-ראשי וברכיאליס (אמות).',
-    cue: 'החזק את המשקולות בצידי הגוף כאשר כפות הידיים פונות פנימה אל הגוף. שמור על המרפקים צמודים לצלעות וסובב משקולת אחת למעלה לכיוון הכתף, הורד לאט והחלף צד.',
+    id: 6,
+    category: 'כתפיים, יד קדמית ואחורית',
+    name: 'כפיפות פטיש לסירוגין (Hammer Curls)',
+    target: 'יד קדמית ואמות',
+    cue: 'החזק משקולות בצדי הגוף כשכפות הידיים פונות פנימה. שמור על המרפקים צמודים לצלעות בזמן הרמת משקולת אחת לכתף, הורד לאט והחלף צד.'
   },
   {
+    id: 7,
+    category: 'כתפיים, יד קדמית ואחורית',
     name: 'פשיטת מרפקים מעל הראש',
-    target: 'יד אחורית.',
-    cue: 'החזק משקולת כבדה אחת (או שתיים קלות) מעל הראש בשתי הידיים וכווץ את הליבה כדי שהצלעות לא יבלטו. הורד את המשקולת מאחורי הראש על ידי כיפוף המרפקים בלבד, השאר אותם מצביעים קדימה, ואז פשוט חזרה למעלה.',
+    target: 'יד אחורית (ראש ארוך)',
+    cue: 'החזק משקולת אחת כבדה (או שתיים קלות) מעל הראש בשתי ידיים, הבטן אסופה והצלעות סגורות. הורד את המשקל מאחורי הראש בכיפוף מרפקים בלבד ויישר חזרה.'
   },
   {
-    name: 'לחיצת ארנולד',
-    target: 'כל שלושת ראשי הכתף (קדמי, אמצעי, אחורי) ויד אחורית.',
-    cue: 'התחל עם המשקולות מוחזקות מול הכתפיים, כפות הידיים פונות לחזה. בזמן לחיצת המשקולות מעל הראש, סובב את פרקי כפות הידיים כך שכפות הידיים יפנו קדימה בשיא התנועה, ואז הפוך את התנועה בדרך למטה.',
-  },
+    id: 8,
+    category: 'כתפיים, יד קדמית ואחורית',
+    name: 'לחיצת כתפיים ארנולד',
+    target: 'כל שלושת ראשי הכתף ויד אחורית',
+    cue: 'התחל כשהמשקולות מול הכתפיים וכפות הידיים פונות לחזה. תוך כדי לחיצה מעל הראש, סובב את פרקי הידיים כך שיפנו קדימה בשיא התנועה, והפוך בירידה.'
+  }
 ];
 
-const CONFIG = {
-  PREPARE_TIME: 10,
-  WORK_TIME: 40,
-  REST_TIME: 20,
-  ROUND_REST_TIME: 90,
-  TOTAL_ROUNDS: 4,
-  TOTAL_STATIONS: 8,
-};
+const WORK_TIME = 40;
+const REST_TIME = 20;
+const ROUND_REST_TIME = 90;
+const TOTAL_ROUNDS = 4;
 
-// Dynamic Procedural Audio Engine for seamless "Playlist" generation
+// --- מנוע מוזיקה פרוצדורלי דינמי (Web Audio API) ---
 class DynamicAudioEngine {
   constructor() {
     this.ctx = null;
-    this.masterGain = null;
     this.isPlaying = false;
-    this.nextNoteTime = 0.0;
-    this.current16thNote = 0;
+    this.isMuted = false;
+    this.isWorkPhase = true;
     this.timerID = null;
-    this.phase = 'prepare';
-    this.volume = 0.5;
+    this.nextNoteTime = 0;
+    this.currentStep = 0;
+    this.trackNumber = 1;
 
-    // Generative Track Parameters
-    this.bpm = 120;
-    this.rootFreq = 65.41; // C2
-    this.scale = [1, 1.189, 1.335, 1.498, 1.782]; // Minor pentatonic frequency ratios
-    this.bassPattern = [];
-    this.kickPattern = [];
-    this.synthType = 'sawtooth';
+    // פרמטרים מוזיקליים המשתנים בכל מעבר של 20-40 שניות
+    this.bpm = 128;
+    this.rootFreq = 55; // A1
+    this.scale = [0, 3, 5, 7, 10, 12]; // סולם מינור פנטטוני
+    this.bassPattern = [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1];
+    this.arpPattern = [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0];
+    this.waveType = 'sawtooth';
+    this.masterGain = null;
   }
 
   init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioContext();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = this.volume;
       this.masterGain.connect(this.ctx.destination);
-      this.generateNewSong(this.phase);
+      this.updateVolume();
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-  }
-
-  setVolume(vol) {
-    this.volume = vol;
-    if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.5);
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
     }
   }
 
-  generateNewSong(phase) {
-    this.phase = phase;
-    const isWork = phase === 'work';
+  randomizeTrack(isWork) {
+    this.isWorkPhase = isWork;
+    this.trackNumber += 1;
+    
+    // שינוי קצב (BPM) בהתאם לעבודה או מנוחה
+    this.bpm = isWork 
+      ? Math.floor(Math.random() * (138 - 124 + 1)) + 124 
+      : Math.floor(Math.random() * (105 - 92 + 1)) + 92;
 
-    // Randomize BPM and Key for that "new track" DJ feel
-    this.bpm = isWork
-      ? Math.floor(Math.random() * 25) + 125
-      : Math.floor(Math.random() * 20) + 75;
+    // בחירת תו שורש חדש
+    const roots = [41.20, 43.65, 49.00, 55.00, 61.74, 65.41]; // E1, F1, G1, A1, B1, C2
+    this.rootFreq = roots[Math.floor(Math.random() * roots.length)];
 
-    // Pick a random root note between C2 (65.41 Hz) and G2 (98.00 Hz)
-    const bases = [65.41, 73.42, 82.41, 87.31, 98.0];
-    this.rootFreq = bases[Math.floor(Math.random() * bases.length)];
-
-    // Swap synthesizer character
-    this.synthType = isWork
-      ? Math.random() > 0.5
-        ? 'sawtooth'
-        : 'square'
-      : Math.random() > 0.5
-      ? 'sine'
+    // החלפת סוג גל הסינתיסייזר
+    const waves = ['sawtooth', 'square', 'triangle'];
+    this.waveType = isWork 
+      ? waves[Math.floor(Math.random() * 2)] 
       : 'triangle';
 
-    // Generate fresh 16-step patterns
-    this.bassPattern = Array.from({ length: 16 }, () =>
-      Math.random() > (isWork ? 0.3 : 0.7)
-        ? Math.floor(Math.random() * this.scale.length)
-        : -1
+    // יצירת מקצב בס וארפג'יו חדשים
+    this.bassPattern = Array.from({ length: 16 }, (_, i) => 
+      (i % 4 === 0) ? 1 : (Math.random() > (isWork ? 0.45 : 0.7) ? 1 : 0)
+    );
+    this.arpPattern = Array.from({ length: 16 }, () => 
+      Math.random() > (isWork ? 0.35 : 0.65) ? 1 : 0
     );
 
-    // Energetic 4-on-the-floor for work, sparse half-time for rest
-    this.kickPattern = isWork
-      ? [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-      : [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+    this.updateVolume();
+    return this.trackNumber;
   }
 
-  nextNote() {
-    const secondsPerBeat = 60.0 / this.bpm;
-    this.nextNoteTime += 0.25 * secondsPerBeat; // 16th note timing
-    this.current16thNote = (this.current16thNote + 1) % 16;
+  updateVolume() {
+    if (!this.masterGain || !this.ctx) return;
+    const targetVol = this.isMuted ? 0 : (this.isWorkPhase ? 0.35 : 0.15);
+    this.masterGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.2);
   }
 
-  scheduleNote(beatNumber, time) {
-    if (!this.ctx) return;
-    const isWork = this.phase === 'work';
+  setMuted(muted) {
+    this.isMuted = muted;
+    this.updateVolume();
+  }
 
-    // 1. Kick Drum
-    if (this.kickPattern[beatNumber] === 1) {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.masterGain);
+  playKick(time) {
+    if (!this.isWorkPhase && this.currentStep % 8 !== 0) return; // הורדת עומס במנוחה
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.masterGain);
 
-      osc.frequency.setValueAtTime(isWork ? 150 : 100, time);
-      osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.15);
-      gain.gain.setValueAtTime(isWork ? 1 : 0.7, time);
-      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.3);
 
-      osc.start(time);
-      osc.stop(time + 0.15);
+    gain.gain.setValueAtTime(0.8, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+
+    osc.start(time);
+    osc.stop(time + 0.3);
+  }
+
+  playHiHat(time, open = false) {
+    const bufferSize = this.ctx.sampleRate * (open ? 0.15 : 0.04);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
     }
 
-    // 2. Dynamic Hi-Hat (Offbeats for work, sporadic for rest)
-    if (
-      (isWork && beatNumber % 2 !== 0) ||
-      (!isWork && beatNumber % 4 === 2 && Math.random() > 0.5)
-    ) {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.connect(gain);
-      gain.connect(this.masterGain);
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
 
-      osc.frequency.setValueAtTime(8000, time);
-      gain.gain.setValueAtTime(isWork ? 0.15 : 0.05, time);
-      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
 
-      osc.start(time);
-      osc.stop(time + 0.05);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(open ? 0.25 : 0.15, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + (open ? 0.15 : 0.04));
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(time);
+  }
+
+  playBass(time, noteFreq) {
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = this.waveType;
+    osc.frequency.setValueAtTime(noteFreq, time);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(this.isWorkPhase ? 600 : 250, time);
+    filter.frequency.exponentialRampToValueAtTime(100, time + 0.2);
+
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.22);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(time);
+    osc.stop(time + 0.22);
+  }
+
+  playArp(time, noteFreq) {
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(noteFreq * 4, time);
+
+    gain.gain.setValueAtTime(0.15, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(time);
+    osc.stop(time + 0.15);
+  }
+
+  playBeep(freq = 880, duration = 0.15, type = 'sine') {
+    this.init();
+    if (this.isMuted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    
+    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  scheduleNote(step, time) {
+    // קיק על רבעים (0, 4, 8, 12)
+    if (step % 4 === 0) {
+      this.playKick(time);
     }
 
-    // 3. Bass/Melody Synth
-    const noteIdx = this.bassPattern[beatNumber];
-    if (noteIdx !== -1) {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = this.synthType;
-      osc.connect(gain);
-      gain.connect(this.masterGain);
+    // היי-האט
+    if (step % 2 === 1) {
+      this.playHiHat(time, step % 4 === 3 && this.isWorkPhase);
+    }
 
-      const freq = this.rootFreq * this.scale[noteIdx];
-      // Bump up an octave occasionally for energy during work phase
-      const octaveMult = isWork && Math.random() > 0.8 ? 2 : 1;
+    // בס
+    if (this.bassPattern[step]) {
+      const interval = this.scale[step % this.scale.length];
+      const freq = this.rootFreq * Math.pow(2, interval / 12);
+      this.playBass(time, freq);
+    }
 
-      osc.frequency.setValueAtTime(freq * octaveMult, time);
-
-      const noteLength = isWork ? 0.15 : 0.4;
-      gain.gain.setValueAtTime(isWork ? 0.25 : 0.15, time);
-      gain.gain.exponentialRampToValueAtTime(0.01, time + noteLength);
-
-      osc.start(time);
-      osc.stop(time + noteLength);
+    // ארפג'יו (מנגינה גבוהה)
+    if (this.arpPattern[step]) {
+      const interval = this.scale[(step * 3) % this.scale.length];
+      const freq = this.rootFreq * Math.pow(2, interval / 12);
+      this.playArp(time, freq);
     }
   }
 
   scheduler() {
-    // Lookahead scheduling to ensure tight timing immune to JS thread stutter
     while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
-      this.scheduleNote(this.current16thNote, this.nextNoteTime);
-      this.nextNote();
+      this.scheduleNote(this.currentStep, this.nextNoteTime);
+      const secondsPerBeat = 60.0 / this.bpm;
+      this.nextNoteTime += 0.25 * secondsPerBeat; // שש-עשריות
+      this.currentStep = (this.currentStep + 1) % 16;
     }
     this.timerID = setTimeout(() => this.scheduler(), 25);
   }
 
   start() {
+    this.init();
     if (this.isPlaying) return;
-    if (!this.ctx) this.init();
     this.isPlaying = true;
-    this.current16thNote = 0;
+    this.currentStep = 0;
     this.nextNoteTime = this.ctx.currentTime + 0.05;
     this.scheduler();
   }
 
   stop() {
     this.isPlaying = false;
-    clearTimeout(this.timerID);
-  }
-
-  playSFX(type, sfxEnabled) {
-    if (!this.ctx || !sfxEnabled) return;
-    const osc = this.ctx.createOscillator();
-    const gainNode = this.ctx.createGain();
-
-    osc.connect(gainNode);
-    // Connect directly to destination to bypass music volume fader
-    gainNode.connect(this.ctx.destination);
-
-    const now = this.ctx.currentTime;
-    if (type === 'countdown') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, now);
-      gainNode.gain.setValueAtTime(0.5, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    } else if (type === 'start') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(1000, now);
-      gainNode.gain.setValueAtTime(0.5, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    } else if (type === 'rest') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(400, now);
-      gainNode.gain.setValueAtTime(0.5, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
+    if (this.timerID) {
+      clearTimeout(this.timerID);
+      this.timerID = null;
     }
   }
 }
 
-export default function WorkoutTimer() {
-  const [timerState, setTimerState] = useState('idle'); // idle, running, paused, finished
-  const [phase, setPhase] = useState('prepare'); // prepare, work, rest, round_rest, finished
-  const [timeLeft, setTimeLeft] = useState(CONFIG.PREPARE_TIME);
+export default function App() {
+  // מצבי הטיימר והאימון
+  const [status, setStatus] = useState('idle'); // 'idle' | 'work' | 'rest' | 'round_rest' | 'finished'
+  const [isRunning, setIsRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(WORK_TIME);
   const [currentRound, setCurrentRound] = useState(1);
-  const [currentStation, setCurrentStation] = useState(1);
+  const [stationIndex, setStationIndex] = useState(0);
+  
+  // מצבי ממשק ואודיו
+  const [isMuted, setIsMuted] = useState(false);
+  const [showCue, setShowCue] = useState(true);
+  const [showAllStations, setShowAllStations] = useState(false);
+  const [trackNum, setTrackNum] = useState(1);
 
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [musicEnabled, setMusicEnabled] = useState(true);
+  const audioRef = useRef(null);
 
-  const audioEngineRef = useRef(null);
+  if (!audioRef.current) {
+    audioRef.current = new DynamicAudioEngine();
+  }
 
-  // Initialize Audio Engine
-  const initAudio = () => {
-    if (!audioEngineRef.current) {
-      audioEngineRef.current = new DynamicAudioEngine();
-    }
-    audioEngineRef.current.init();
-  };
+  const currentStation = WORKOUT_STATIONS[stationIndex];
+  const nextStation = stationIndex < WORKOUT_STATIONS.length - 1 
+    ? WORKOUT_STATIONS[stationIndex + 1] 
+    : (currentRound < TOTAL_ROUNDS ? WORKOUT_STATIONS[0] : null);
 
-  // Generate a new song automatically when phase changes
+  // ניהול מנוע המוזיקה בהתאם למצב
   useEffect(() => {
-    if (audioEngineRef.current) {
-      audioEngineRef.current.generateNewSong(phase);
-    }
-  }, [phase]);
+    const engine = audioRef.current;
+    engine.setMuted(isMuted);
 
-  // Sync music playback and volume with app state
-  useEffect(() => {
-    if (!audioEngineRef.current) return;
-
-    if (timerState === 'running' && musicEnabled && phase !== 'finished') {
-      audioEngineRef.current.start();
-      audioEngineRef.current.setVolume(phase === 'work' ? 0.6 : 0.2);
+    if (isRunning && (status === 'work' || status === 'rest' || status === 'round_rest')) {
+      engine.start();
     } else {
-      audioEngineRef.current.stop();
+      engine.stop();
     }
-  }, [timerState, phase, musicEnabled]);
 
-  const playBeep = useCallback(
-    (type) => {
-      if (audioEngineRef.current) {
-        audioEngineRef.current.playSFX(type, soundEnabled);
-      }
-    },
-    [soundEnabled]
-  );
+    return () => engine.stop();
+  }, [isRunning, status, isMuted]);
 
-  // Main Timer Logic
+  // לוגיקת הטיימר והמעברים
   useEffect(() => {
-    let interval = null;
+    if (!isRunning) return;
 
-    if (timerState === 'running' && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          const nextTime = prev - 1;
-          if (nextTime === 3 || nextTime === 2 || nextTime === 1) {
-            playBeep('countdown');
-          }
-          return nextTime;
-        });
-      }, 1000);
-    } else if (timerState === 'running' && timeLeft === 0) {
-      if (phase === 'prepare') {
-        setPhase('work');
-        setTimeLeft(CONFIG.WORK_TIME);
-        playBeep('start');
-      } else if (phase === 'work') {
-        if (currentStation < CONFIG.TOTAL_STATIONS) {
-          setPhase('rest');
-          setTimeLeft(CONFIG.REST_TIME);
-          playBeep('rest');
-        } else {
-          if (currentRound < CONFIG.TOTAL_ROUNDS) {
-            setPhase('round_rest');
-            setTimeLeft(CONFIG.ROUND_REST_TIME);
-            playBeep('rest');
-          } else {
-            setPhase('finished');
-            setTimerState('finished');
-            playBeep('start');
-          }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        // צפצופי ספירה לאחור (3, 2, 1)
+        if (prev <= 4 && prev > 1) {
+          audioRef.current.playBeep(660, 0.1, 'sine');
         }
-      } else if (phase === 'rest') {
-        setCurrentStation((prev) => prev + 1);
-        setPhase('work');
-        setTimeLeft(CONFIG.WORK_TIME);
-        playBeep('start');
-      } else if (phase === 'round_rest') {
-        setCurrentRound((prev) => prev + 1);
-        setCurrentStation(1);
-        setPhase('work');
-        setTimeLeft(CONFIG.WORK_TIME);
-        playBeep('start');
+
+        if (prev <= 1) {
+          handlePhaseTransition();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isRunning, status, stationIndex, currentRound]);
+
+  const handlePhaseTransition = () => {
+    const engine = audioRef.current;
+
+    if (status === 'work') {
+      // סיום תחנת עבודה
+      engine.playBeep(440, 0.3, 'triangle'); // צליל ירידה למנוחה
+      
+      if (stationIndex < WORKOUT_STATIONS.length - 1) {
+        // מעבר למנוחה רגילה (20 שניות)
+        setStatus('rest');
+        setTimeLeft(REST_TIME);
+        setTrackNum(engine.randomizeTrack(false));
+      } else if (currentRound < TOTAL_ROUNDS) {
+        // סיום סבב - מעבר למנוחה ארוכה (90 שניות)
+        setStatus('round_rest');
+        setTimeLeft(ROUND_REST_TIME);
+        setTrackNum(engine.randomizeTrack(false));
+      } else {
+        // סיום האימון כולו!
+        setStatus('finished');
+        setIsRunning(false);
+        engine.stop();
+        engine.playBeep(880, 0.5, 'sine');
       }
-    }
-
-    return () => clearInterval(interval);
-  }, [timerState, timeLeft, phase, currentRound, currentStation, playBeep]);
-
-  const toggleTimer = () => {
-    initAudio();
-    if (timerState === 'idle' || timerState === 'paused') {
-      setTimerState('running');
-    } else if (timerState === 'running') {
-      setTimerState('paused');
+    } else if (status === 'rest') {
+      // סיום מנוחה -> מעבר לתחנה הבאה
+      engine.playBeep(880, 0.25, 'square'); // צליל הזנקה חד
+      setStationIndex((prev) => prev + 1);
+      setStatus('work');
+      setTimeLeft(WORK_TIME);
+      setTrackNum(engine.randomizeTrack(true));
+    } else if (status === 'round_rest') {
+      // סיום מנוחת סבב -> סבב חדש מתחנה 1
+      engine.playBeep(880, 0.25, 'square');
+      setCurrentRound((prev) => prev + 1);
+      setStationIndex(0);
+      setStatus('work');
+      setTimeLeft(WORK_TIME);
+      setTrackNum(engine.randomizeTrack(true));
     }
   };
 
-  const resetTimer = () => {
-    setTimerState('idle');
-    setPhase('prepare');
-    setTimeLeft(CONFIG.PREPARE_TIME);
+  const togglePlayPause = () => {
+    if (status === 'idle') {
+      audioRef.current.init();
+      audioRef.current.playBeep(880, 0.2, 'square');
+      setStatus('work');
+      setTimeLeft(WORK_TIME);
+      setTrackNum(audioRef.current.randomizeTrack(true));
+      setIsRunning(true);
+    } else {
+      setIsRunning(!isRunning);
+    }
+  };
+
+  const handleSkip = () => {
+    if (status === 'idle' || status === 'finished') return;
+    handlePhaseTransition();
+  };
+
+  const handleReset = () => {
+    setIsRunning(false);
+    audioRef.current.stop();
+    setStatus('idle');
     setCurrentRound(1);
-    setCurrentStation(1);
+    setStationIndex(0);
+    setTimeLeft(WORK_TIME);
   };
 
+  const handleNextTrackManual = () => {
+    if (status === 'idle' || status === 'finished') return;
+    setTrackNum(audioRef.current.randomizeTrack(status === 'work'));
+  };
+
+  // חישוב אחוזי התקדמות לעיגול הטיימר
+  const totalPhaseTime = status === 'work' ? WORK_TIME : (status === 'rest' ? REST_TIME : ROUND_REST_TIME);
+  const progressPercentage = status === 'idle' ? 100 : ((totalPhaseTime - timeLeft) / totalPhaseTime) * 100;
+
+  // צבעים דינמיים לפי שלב
+  const getThemeColors = () => {
+    switch (status) {
+      case 'work':
+        return {
+          bg: 'bg-gray-950',
+          accent: 'text-emerald-400',
+          border: 'border-emerald-500/30',
+          ring: 'stroke-emerald-500',
+          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+          btn: 'bg-emerald-500 hover:bg-emerald-600 text-gray-950',
+          label: 'עבודה עצימה!'
+        };
+      case 'rest':
+        return {
+          bg: 'bg-gray-950',
+          accent: 'text-amber-400',
+          border: 'border-amber-500/30',
+          ring: 'stroke-amber-400',
+          badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+          btn: 'bg-amber-500 hover:bg-amber-600 text-gray-950',
+          label: 'מנוחה והתארגנות'
+        };
+      case 'round_rest':
+        return {
+          bg: 'bg-gray-950',
+          accent: 'text-sky-400',
+          border: 'border-sky-500/30',
+          ring: 'stroke-sky-400',
+          badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+          btn: 'bg-sky-500 hover:bg-sky-600 text-gray-950',
+          label: 'מנוחת סבב (90 שנ׳)'
+        };
+      default:
+        return {
+          bg: 'bg-gray-950',
+          accent: 'text-emerald-400',
+          border: 'border-gray-800',
+          ring: 'stroke-emerald-500',
+          badge: 'bg-gray-800 text-gray-300 border-gray-700',
+          btn: 'bg-emerald-500 hover:bg-emerald-600 text-gray-950',
+          label: 'מוכן להתחלה'
+        };
+    }
+  };
+
+  const theme = getThemeColors();
+
+  // פורמט זמן MM:SS
   const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m > 0 ? m + ':' : ''}${s
-      .toString()
-      .padStart(m > 0 ? 2 : 1, '0')}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs < 10 ? '0' : ''}${secs}` : `${secs}`;
   };
-
-  // UI Theme Helpers
-  const getPhaseColors = () => {
-    switch (phase) {
-      case 'prepare':
-        return 'text-blue-400 border-blue-500 shadow-blue-500/30';
-      case 'work':
-        return 'text-green-400 border-green-500 shadow-green-500/30';
-      case 'rest':
-        return 'text-orange-400 border-orange-500 shadow-orange-500/30';
-      case 'round_rest':
-        return 'text-purple-400 border-purple-500 shadow-purple-500/30';
-      case 'finished':
-        return 'text-yellow-400 border-yellow-500 shadow-yellow-500/30';
-      default:
-        return 'text-slate-400 border-slate-500';
-    }
-  };
-
-  const getPhaseText = () => {
-    switch (phase) {
-      case 'prepare':
-        return 'התכונן';
-      case 'work':
-        return 'עבודה!';
-      case 'rest':
-        return 'מנוחה';
-      case 'round_rest':
-        return 'מנוחת סיבוב';
-      case 'finished':
-        return 'סיום';
-      default:
-        return '';
-    }
-  };
-
-  const currentExercise = EXERCISES[currentStation - 1];
-  const nextExercise =
-    currentStation < CONFIG.TOTAL_STATIONS
-      ? EXERCISES[currentStation]
-      : EXERCISES[0];
-  const isResting =
-    phase === 'rest' || phase === 'round_rest' || phase === 'prepare';
 
   return (
-    <div
-      dir="rtl"
-      className="h-[100dvh] w-full max-w-md mx-auto bg-slate-950 text-slate-100 font-sans selection:bg-slate-700 flex flex-col relative sm:border-x sm:border-slate-800 shadow-2xl overflow-hidden"
-    >
-      {/* App Header */}
-      <header className="px-4 py-4 flex items-center justify-between border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10 shrink-0">
-        <div className="flex items-center gap-2">
-          <Activity className="w-8 h-8 text-indigo-400" />
-          <h1 className="text-4xl font-black tracking-tighter">אימון HIIRT</h1>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => {
-              initAudio();
-              setMusicEnabled(!musicEnabled);
-            }}
-            className={`p-2 rounded-full transition-colors ${
-              musicEnabled
-                ? 'text-indigo-400 bg-indigo-900/30'
-                : 'text-slate-500'
-            }`}
-            aria-label="Toggle Music"
-          >
-            <Music className="w-5 h-5" />
-            {!musicEnabled && (
-              <div className="absolute w-6 h-0.5 bg-slate-500 -rotate-45 translate-x-[-2px] translate-y-[-10px]"></div>
-            )}
-          </button>
-          <button
-            onClick={() => {
-              initAudio();
-              setSoundEnabled(!soundEnabled);
-            }}
-            className={`p-2 rounded-full transition-colors ${
-              soundEnabled
-                ? 'text-indigo-400 bg-indigo-900/30'
-                : 'text-slate-500'
-            }`}
-            aria-label="Toggle SFX"
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-5 h-5" />
-            ) : (
-              <VolumeX className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* Main Scrollable Content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-28 flex flex-col gap-6 relative">
-        {/* Progress Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 flex flex-col items-center justify-center">
-            <span className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">
-              סיבוב
-            </span>
-            <div className="text-xl font-bold tabular-nums">
-              {currentRound}{' '}
-              <span className="text-slate-600 text-sm">
-                / {CONFIG.TOTAL_ROUNDS}
-              </span>
+    <div dir="rtl" className="min-h-[100dvh] bg-black text-white flex justify-center font-sans select-none">
+      {/* קונטיינר מובייל */}
+      <div className={`w-full max-w-md ${theme.bg} flex flex-col justify-between h-[100dvh] overflow-hidden relative shadow-2xl border-x border-gray-900`}>
+        
+        {/* כותרת עליונה מוגדלת ובולטת */}
+        <header className="px-4 pt-4 pb-2 border-b border-gray-900 bg-gray-950/90 backdrop-blur-md z-10">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+                אימון HIIRT משקולות
+              </h1>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">
+                8 תחנות • 4 סבבים • 40 שנ׳ עבודה / 20 שנ׳ מנוחה
+              </p>
             </div>
-          </div>
-          <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 flex flex-col items-center justify-center">
-            <span className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">
-              תחנה
-            </span>
-            <div className="text-xl font-bold tabular-nums">
-              {currentStation}{' '}
-              <span className="text-slate-600 text-sm">
-                / {CONFIG.TOTAL_STATIONS}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Timer Display */}
-        <div className="flex flex-col items-center justify-center py-4 shrink-0">
-          <div
-            className={`relative flex flex-col items-center justify-center w-56 h-56 rounded-full border-[6px] bg-slate-950 shadow-[0_0_30px_rgba(0,0,0,0.4)] transition-colors duration-500 ${getPhaseColors()}`}
-          >
-            {/* Pulsing Visual Effect at 3, 2, 1 */}
-            {timeLeft <= 3 && timeLeft > 0 && timerState === 'running' && (
-              <div className="absolute inset-0 rounded-full animate-ping opacity-25 bg-current"></div>
-            )}
-
-            <span className="text-sm font-bold uppercase tracking-[0.1em] mb-1">
-              {getPhaseText()}
-            </span>
-            <span
-              className="text-7xl font-black tracking-tighter tabular-nums leading-none"
-              dir="ltr"
-            >
-              {formatTime(timeLeft)}
-            </span>
-
-            {/* Paused Indicator */}
-            {timerState === 'paused' && (
-              <span className="absolute bottom-8 text-[10px] uppercase tracking-widest text-slate-400 font-semibold bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
-                מושהה
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Exercise Information Cards */}
-        {phase !== 'finished' ? (
-          <div className="flex flex-col gap-3">
-            {/* Current Exercise (Highlighted during work) */}
-            <div
-              className={`rounded-xl p-4 border transition-all duration-300 ${
-                phase === 'work'
-                  ? 'bg-indigo-900/20 border-indigo-500/40 shadow-lg shadow-indigo-900/20'
-                  : 'bg-slate-900 border-slate-800'
+            
+            {/* כפתור השתקת סאונד */}
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className={`p-2.5 rounded-full border transition-all ${
+                isMuted 
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                  : 'bg-gray-900 border-gray-800 text-emerald-400'
               }`}
+              aria-label="השתק או הפעל סאונד"
             >
-              <div className="flex items-center gap-2 mb-2">
-                {phase === 'work' && (
-                  <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                )}
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">
-                  {phase === 'work' ? 'תחנה פעילה' : 'פרטי התחנה הנוכחית'}
-                </p>
-              </div>
-              <h2
-                className={`text-xl font-bold mb-4 ${
-                  phase === 'work' ? 'text-white' : 'text-slate-300'
-                }`}
-              >
-                {currentExercise.name}
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-wide mb-1">
-                    שרירי מטרה
-                  </h3>
-                  <p className="text-slate-300 text-sm leading-snug">
-                    {currentExercise.target}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-1">
-                    דגשים
-                  </h3>
-                  <p className="text-slate-300 text-sm leading-snug">
-                    {currentExercise.cue}
-                  </p>
-                </div>
-              </div>
+              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </button>
+          </div>
+
+          {/* בר התקדמות סבבים ותחנות */}
+          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-900/80 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Flame size={14} className="text-orange-500" />
+              <span className="font-bold text-gray-200">סבב {currentRound} מתוך {TOTAL_ROUNDS}</span>
             </div>
+            <div className="flex gap-1">
+              {WORKOUT_STATIONS.map((st, idx) => (
+                <div
+                  key={st.id}
+                  className={`h-1.5 w-4 rounded-full transition-all ${
+                    idx < stationIndex 
+                      ? 'bg-emerald-500' 
+                      : idx === stationIndex && status !== 'idle'
+                        ? (status === 'work' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400')
+                        : 'bg-gray-800'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </header>
 
-            {/* Upcoming Exercise */}
-            {isResting && (
-              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800/60">
-                <p className="text-orange-400 text-xs font-bold uppercase tracking-wider mb-1">
-                  הבא בתור
-                </p>
-                <h2 className="text-base font-bold text-slate-200 mb-1">
-                  {nextExercise.name}
-                </h2>
+        {/* אזור תוכן מרכזי נגלל */}
+        <main className="flex-1 overflow-y-auto px-4 py-3 flex flex-col justify-between gap-3">
+          
+          {status === 'finished' ? (
+            /* מסך סיום אימון */
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+              <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/40">
+                <Trophy size={40} className="text-emerald-400" />
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-green-900/20 rounded-2xl border border-green-500/30">
-            <CheckCircle className="w-12 h-12 text-green-400 mb-3" />
-            <h2 className="text-3xl font-bold text-white mb-2">
-              האימון הושלם!
-            </h2>
-            <p className="text-slate-300 text-base">
-              עבודה מדהימה! סיימת אימון HIIRT של 8 תחנות.
-            </p>
-          </div>
-        )}
-      </main>
-
-      {/* Sticky Bottom Action Bar */}
-      <div className="absolute bottom-0 left-0 w-full bg-slate-950/95 backdrop-blur border-t border-slate-800 p-4 pb-safe flex justify-between items-center z-20">
-        <button
-          onClick={resetTimer}
-          className="p-3 sm:p-4 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-700"
-          aria-label="אפס"
-        >
-          <RotateCcw className="w-6 h-6" />
-        </button>
-
-        <button
-          onClick={toggleTimer}
-          className={`flex-1 mx-4 max-w-[200px] h-14 rounded-full flex items-center justify-center gap-2 font-bold text-xl transition-all focus:outline-none focus:ring-4 active:scale-95 ${
-            timerState === 'running'
-              ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 focus:ring-slate-700'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white focus:ring-indigo-700 shadow-lg shadow-indigo-900/50'
-          }`}
-          aria-label={timerState === 'running' ? 'השהה' : 'התחל'}
-        >
-          {timerState === 'running' ? (
-            <>
-              <Pause className="w-6 h-6 fill-current" /> השהה
-            </>
+              <h2 className="text-3xl font-black text-white mb-2">האימון הושלם!</h2>
+              <p className="text-gray-400 text-sm max-w-xs mb-6">
+                סיימת בהצלחה את כל 4 הסבבים ו-8 התחנות. עבודה אדירה!
+              </p>
+              <button
+                onClick={handleReset}
+                className="px-6 py-3.5 bg-emerald-500 text-gray-950 font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+              >
+                <RotateCcw size={18} />
+                התחל אימון חדש
+              </button>
+            </div>
           ) : (
             <>
-              <Play className="w-6 h-6 fill-current" /> התחל
+              {/* חיווי מצב ומוזיקה חיה */}
+              <div className="flex items-center justify-between">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${theme.badge}`}>
+                  {theme.label}
+                </span>
+
+                {status !== 'idle' && (
+                  <button 
+                    onClick={handleNextTrackManual}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-900 border border-gray-800 text-[11px] text-gray-300 active:scale-95 transition"
+                  >
+                    <Music size={12} className={isRunning && !isMuted ? 'text-emerald-400 animate-bounce' : 'text-gray-500'} />
+                    <span>מיקס #{trackNum}</span>
+                    <RefreshCw size={10} className="text-gray-500 mr-0.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* שעון טיימר מרכזי */}
+              <div className="relative flex items-center justify-center my-1">
+                <svg className="w-48 h-48 -rotate-90 transform" viewBox="0 0 120 120">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="7"
+                    className="text-gray-900"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    fill="none"
+                    strokeWidth="7"
+                    strokeDasharray={2 * Math.PI * 52}
+                    strokeDashoffset={2 * Math.PI * 52 * (1 - progressPercentage / 100)}
+                    strokeLinecap="round"
+                    className={`${theme.ring} transition-all duration-300 ease-linear`}
+                  />
+                </svg>
+                
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-5xl font-black tracking-tighter tabular-nums">
+                    {formatTime(timeLeft)}
+                  </span>
+                  <span className="text-xs text-gray-400 font-medium mt-1">
+                    {status === 'idle' ? 'שניות לתחנה' : (status === 'work' ? 'קצב חזק ומבוקר' : 'התאוששות')}
+                  </span>
+                </div>
+              </div>
+
+              {/* כרטיס התחנה הנוכחית / הבאה */}
+              <div className={`p-4 rounded-2xl bg-gray-900/90 border ${theme.border} transition-all`}>
+                <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span>
+                    {status === 'rest' || status === 'round_rest' 
+                      ? 'התחנה הבאה בתור:' 
+                      : `תחנה ${currentStation.id} מתוך ${WORKOUT_STATIONS.length}`}
+                  </span>
+                  <span className="text-gray-500">
+                    {(status === 'rest' || status === 'round_rest') && nextStation 
+                      ? nextStation.category 
+                      : currentStation.category}
+                  </span>
+                </div>
+
+                <h2 className="text-xl font-extrabold text-white leading-snug mb-1.5">
+                  {(status === 'rest' || status === 'round_rest') && nextStation 
+                    ? nextStation.name 
+                    : currentStation.name}
+                </h2>
+
+                <div className="inline-block px-2 py-0.5 rounded bg-gray-800 text-gray-300 text-[11px] font-medium mb-2.5">
+                  שרירי מטרה: {(status === 'rest' || status === 'round_rest') && nextStation 
+                    ? nextStation.target 
+                    : currentStation.target}
+                </div>
+
+                {/* דגשי ביצוע מתקפלים */}
+                <div className="border-t border-gray-800/80 pt-2">
+                  <button
+                    onClick={() => setShowCue(!showCue)}
+                    className="flex items-center justify-between w-full text-xs font-semibold text-emerald-400"
+                  >
+                    <span className="flex items-center gap-1">
+                      <Info size={14} />
+                      דגשים לביצוע נכון
+                    </span>
+                    {showCue ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                  
+                  {showCue && (
+                    <p className="text-xs text-gray-300 leading-relaxed mt-1.5">
+                      {(status === 'rest' || status === 'round_rest') && nextStation 
+                        ? nextStation.cue 
+                        : currentStation.cue}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* כפתור להצגת כל רשימת התחנות */}
+              <button
+                onClick={() => setShowAllStations(!showAllStations)}
+                className="w-full py-2 text-xs text-gray-400 hover:text-white flex items-center justify-center gap-1 border border-gray-900 rounded-xl bg-gray-950"
+              >
+                <span>{showAllStations ? 'הסתר רשימת תחנות' : 'צפה בכל 8 התחנות'}</span>
+                {showAllStations ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+
+              {showAllStations && (
+                <div className="space-y-2 pb-2">
+                  {WORKOUT_STATIONS.map((st, idx) => (
+                    <div 
+                      key={st.id}
+                      onClick={() => {
+                        setStationIndex(idx);
+                        setStatus('work');
+                        setTimeLeft(WORK_TIME);
+                        setShowAllStations(false);
+                      }}
+                      className={`p-3 rounded-xl border text-right cursor-pointer transition ${
+                        idx === stationIndex 
+                          ? 'bg-emerald-950/30 border-emerald-500/40' 
+                          : 'bg-gray-900/50 border-gray-800/60 hover:bg-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-white">{st.id}. {st.name}</span>
+                        {idx < stationIndex && <CheckCircle size={14} className="text-emerald-500" />}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{st.target}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
-        </button>
+        </main>
 
-        <div className="w-12 sm:w-14"></div>
+        {/* סרגל פקדים תחתון קבוע (Sticky Bottom Bar) */}
+        {status !== 'finished' && (
+          <footer className="p-4 bg-gray-950 border-t border-gray-900 flex items-center justify-between gap-3 z-10">
+            <button
+              onClick={handleReset}
+              disabled={status === 'idle'}
+              className="p-3.5 rounded-2xl bg-gray-900 text-gray-400 hover:text-white disabled:opacity-30 transition border border-gray-800"
+              aria-label="אפס אימון"
+            >
+              <RotateCcw size={22} />
+            </button>
+
+            <button
+              onClick={togglePlayPause}
+              className={`flex-1 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.98] ${theme.btn}`}
+            >
+              {isRunning ? (
+                <>
+                  <Pause size={24} fill="currentColor" />
+                  <span>השהה אימון</span>
+                </>
+              ) : (
+                <>
+                  <Play size={24} fill="currentColor" />
+                  <span>{status === 'idle' ? 'התחל אימון' : 'המשך אימון'}</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleSkip}
+              disabled={status === 'idle'}
+              className="p-3.5 rounded-2xl bg-gray-900 text-gray-400 hover:text-white disabled:opacity-30 transition border border-gray-800"
+              aria-label="דלג שלב"
+            >
+              <SkipForward size={22} />
+            </button>
+          </footer>
+        )}
+
       </div>
     </div>
   );
