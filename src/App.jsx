@@ -78,10 +78,9 @@ class DynamicAudioEngine {
     this.currentStep = 0;
     this.trackNumber = 1;
 
-    // פרמטרים מוזיקליים המשתנים בכל מעבר של 20-40 שניות
     this.bpm = 128;
-    this.rootFreq = 55; // A1
-    this.scale = [0, 3, 5, 7, 10, 12]; // סולם מינור פנטטוני
+    this.rootFreq = 55;
+    this.scale = [0, 3, 5, 7, 10, 12];
     this.bassPattern = [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1];
     this.arpPattern = [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0];
     this.waveType = 'sawtooth';
@@ -105,22 +104,18 @@ class DynamicAudioEngine {
     this.isWorkPhase = isWork;
     this.trackNumber += 1;
     
-    // שינוי קצב (BPM) בהתאם לעבודה או מנוחה
     this.bpm = isWork 
       ? Math.floor(Math.random() * (138 - 124 + 1)) + 124 
       : Math.floor(Math.random() * (105 - 92 + 1)) + 92;
 
-    // בחירת תו שורש חדש
-    const roots = [41.20, 43.65, 49.00, 55.00, 61.74, 65.41]; // E1, F1, G1, A1, B1, C2
+    const roots = [41.20, 43.65, 49.00, 55.00, 61.74, 65.41];
     this.rootFreq = roots[Math.floor(Math.random() * roots.length)];
 
-    // החלפת סוג גל הסינתיסייזר
     const waves = ['sawtooth', 'square', 'triangle'];
     this.waveType = isWork 
       ? waves[Math.floor(Math.random() * 2)] 
       : 'triangle';
 
-    // יצירת מקצב בס וארפג'יו חדשים
     this.bassPattern = Array.from({ length: 16 }, (_, i) => 
       (i % 4 === 0) ? 1 : (Math.random() > (isWork ? 0.45 : 0.7) ? 1 : 0)
     );
@@ -144,7 +139,7 @@ class DynamicAudioEngine {
   }
 
   playKick(time) {
-    if (!this.isWorkPhase && this.currentStep % 8 !== 0) return; // הורדת עומס במנוחה
+    if (!this.isWorkPhase && this.currentStep % 8 !== 0) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.connect(gain);
@@ -244,24 +239,20 @@ class DynamicAudioEngine {
   }
 
   scheduleNote(step, time) {
-    // קיק על רבעים (0, 4, 8, 12)
     if (step % 4 === 0) {
       this.playKick(time);
     }
 
-    // היי-האט
     if (step % 2 === 1) {
       this.playHiHat(time, step % 4 === 3 && this.isWorkPhase);
     }
 
-    // בס
     if (this.bassPattern[step]) {
       const interval = this.scale[step % this.scale.length];
       const freq = this.rootFreq * Math.pow(2, interval / 12);
       this.playBass(time, freq);
     }
 
-    // ארפג'יו (מנגינה גבוהה)
     if (this.arpPattern[step]) {
       const interval = this.scale[(step * 3) % this.scale.length];
       const freq = this.rootFreq * Math.pow(2, interval / 12);
@@ -273,7 +264,7 @@ class DynamicAudioEngine {
     while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
       this.scheduleNote(this.currentStep, this.nextNoteTime);
       const secondsPerBeat = 60.0 / this.bpm;
-      this.nextNoteTime += 0.25 * secondsPerBeat; // שש-עשריות
+      this.nextNoteTime += 0.25 * secondsPerBeat;
       this.currentStep = (this.currentStep + 1) % 16;
     }
     this.timerID = setTimeout(() => this.scheduler(), 25);
@@ -298,14 +289,12 @@ class DynamicAudioEngine {
 }
 
 export default function App() {
-  // מצבי הטיימר והאימון
-  const [status, setStatus] = useState('idle'); // 'idle' | 'work' | 'rest' | 'round_rest' | 'finished'
+  const [status, setStatus] = useState('idle');
   const [isRunning, setIsRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(WORK_TIME);
   const [currentRound, setCurrentRound] = useState(1);
   const [stationIndex, setStationIndex] = useState(0);
   
-  // מצבי ממשק ואודיו
   const [isMuted, setIsMuted] = useState(false);
   const [showCue, setShowCue] = useState(true);
   const [showAllStations, setShowAllStations] = useState(false);
@@ -322,7 +311,6 @@ export default function App() {
     ? WORKOUT_STATIONS[stationIndex + 1] 
     : (currentRound < TOTAL_ROUNDS ? WORKOUT_STATIONS[0] : null);
 
-  // ניהול מנוע המוזיקה בהתאם למצב
   useEffect(() => {
     const engine = audioRef.current;
     engine.setMuted(isMuted);
@@ -336,13 +324,11 @@ export default function App() {
     return () => engine.stop();
   }, [isRunning, status, isMuted]);
 
-  // לוגיקת הטיימר והמעברים
   useEffect(() => {
     if (!isRunning) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
-        // צפצופי ספירה לאחור (3, 2, 1)
         if (prev <= 4 && prev > 1) {
           audioRef.current.playBeep(660, 0.1, 'sine');
         }
@@ -362,35 +348,29 @@ export default function App() {
     const engine = audioRef.current;
 
     if (status === 'work') {
-      // סיום תחנת עבודה
-      engine.playBeep(440, 0.3, 'triangle'); // צליל ירידה למנוחה
+      engine.playBeep(440, 0.3, 'triangle');
       
       if (stationIndex < WORKOUT_STATIONS.length - 1) {
-        // מעבר למנוחה רגילה (20 שניות)
         setStatus('rest');
         setTimeLeft(REST_TIME);
         setTrackNum(engine.randomizeTrack(false));
       } else if (currentRound < TOTAL_ROUNDS) {
-        // סיום סבב - מעבר למנוחה ארוכה (90 שניות)
         setStatus('round_rest');
         setTimeLeft(ROUND_REST_TIME);
         setTrackNum(engine.randomizeTrack(false));
       } else {
-        // סיום האימון כולו!
         setStatus('finished');
         setIsRunning(false);
         engine.stop();
         engine.playBeep(880, 0.5, 'sine');
       }
     } else if (status === 'rest') {
-      // סיום מנוחה -> מעבר לתחנה הבאה
-      engine.playBeep(880, 0.25, 'square'); // צליל הזנקה חד
+      engine.playBeep(880, 0.25, 'square');
       setStationIndex((prev) => prev + 1);
       setStatus('work');
       setTimeLeft(WORK_TIME);
       setTrackNum(engine.randomizeTrack(true));
     } else if (status === 'round_rest') {
-      // סיום מנוחת סבב -> סבב חדש מתחנה 1
       engine.playBeep(880, 0.25, 'square');
       setCurrentRound((prev) => prev + 1);
       setStationIndex(0);
@@ -432,11 +412,9 @@ export default function App() {
     setTrackNum(audioRef.current.randomizeTrack(status === 'work'));
   };
 
-  // חישוב אחוזי התקדמות לעיגול הטיימר
   const totalPhaseTime = status === 'work' ? WORK_TIME : (status === 'rest' ? REST_TIME : ROUND_REST_TIME);
   const progressPercentage = status === 'idle' ? 100 : ((totalPhaseTime - timeLeft) / totalPhaseTime) * 100;
 
-  // צבעים דינמיים לפי שלב
   const getThemeColors = () => {
     switch (status) {
       case 'work':
@@ -484,7 +462,6 @@ export default function App() {
 
   const theme = getThemeColors();
 
-  // פורמט זמן MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -493,13 +470,17 @@ export default function App() {
 
   return (
     <div dir="rtl" className="min-h-[100dvh] bg-black text-white flex justify-center font-sans select-none">
-      {/* קונטיינר מובייל */}
       <div className={`w-full max-w-md ${theme.bg} flex flex-col justify-between h-[100dvh] overflow-hidden relative shadow-2xl border-x border-gray-900`}>
         
-        {/* כותרת עליונה מוגדלת ובולטת */}
+        {/* כותרת עליונה ממותגת ומוגדלת */}
         <header className="px-4 pt-4 pb-2 border-b border-gray-900 bg-gray-950/90 backdrop-blur-md z-10">
           <div className="flex items-start justify-between gap-2">
             <div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold mb-1">
+                <span>שיטת שני הכוחות</span>
+                <span className="text-gray-600">•</span>
+                <span>שלו חן - מאמן אחרת</span>
+              </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
                 אימון HIIRT משקולות
               </h1>
@@ -508,7 +489,6 @@ export default function App() {
               </p>
             </div>
             
-            {/* כפתור השתקת סאונד */}
             <button
               onClick={() => setIsMuted(!isMuted)}
               className={`p-2.5 rounded-full border transition-all ${
@@ -522,7 +502,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* בר התקדמות סבבים ותחנות */}
           <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-900/80 text-xs">
             <div className="flex items-center gap-1.5">
               <Flame size={14} className="text-orange-500" />
@@ -549,7 +528,6 @@ export default function App() {
         <main className="flex-1 overflow-y-auto px-4 py-3 flex flex-col justify-between gap-3">
           
           {status === 'finished' ? (
-            /* מסך סיום אימון */
             <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
               <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/40">
                 <Trophy size={40} className="text-emerald-400" />
@@ -568,7 +546,6 @@ export default function App() {
             </div>
           ) : (
             <>
-              {/* חיווי מצב ומוזיקה חיה */}
               <div className="flex items-center justify-between">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold border ${theme.badge}`}>
                   {theme.label}
@@ -586,7 +563,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* שעון טיימר מרכזי */}
               <div className="relative flex items-center justify-center my-1">
                 <svg className="w-48 h-48 -rotate-90 transform" viewBox="0 0 120 120">
                   <circle
@@ -621,7 +597,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* כרטיס התחנה הנוכחית / הבאה */}
               <div className={`p-4 rounded-2xl bg-gray-900/90 border ${theme.border} transition-all`}>
                 <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
                   <span>
@@ -648,7 +623,6 @@ export default function App() {
                     : currentStation.target}
                 </div>
 
-                {/* דגשי ביצוע מתקפלים */}
                 <div className="border-t border-gray-800/80 pt-2">
                   <button
                     onClick={() => setShowCue(!showCue)}
@@ -671,7 +645,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* כפתור להצגת כל רשימת התחנות */}
               <button
                 onClick={() => setShowAllStations(!showAllStations)}
                 className="w-full py-2 text-xs text-gray-400 hover:text-white flex items-center justify-center gap-1 border border-gray-900 rounded-xl bg-gray-950"
@@ -710,7 +683,7 @@ export default function App() {
           )}
         </main>
 
-        {/* סרגל פקדים תחתון קבוע (Sticky Bottom Bar) */}
+        {/* סרגל פקדים תחתון קבוע */}
         {status !== 'finished' && (
           <footer className="p-4 bg-gray-950 border-t border-gray-900 flex items-center justify-between gap-3 z-10">
             <button
